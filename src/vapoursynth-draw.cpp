@@ -31,7 +31,7 @@ struct DrawData {
     const VSVideoInfo *vi;
 
     bool process[3];
-    std::vector<float> lut[3];
+    std::unique_ptr<float[]> lut[3];
 };
 
 template<typename T>
@@ -127,19 +127,21 @@ static void VS_CC drawCreate(const VSMap *in, VSMap *out, void *userData, VSCore
         }
 
         std::string expr[3];
+        std::vector<Operator> token[3];
 
         for (int i = 0; i < numExpr; ++i) {
             expr[i] = vsapi->propGetData(in, "expr", i, nullptr);
+            stripRedundantSpace(expr[i]);
+            tokenize(expr[i], token[i]);
         }
 
         for (int i = numExpr; i < 3; ++i) {
-            expr[i] = expr[numExpr - 1];
+            token[i] = token[numExpr - 1];
         }
 
         for (int i = 0; i < 3; ++i) {
-            if (!expr[i].empty()) {
+            if (!token[i].empty()) {
                 d->process[i] = true;
-                std::shared_ptr<ExpTreeNode> expressionTree = buildExpressionTree(expr[i]);
 
                 int w = d->vi->width;
                 int h = d->vi->height;
@@ -149,11 +151,12 @@ static void VS_CC drawCreate(const VSMap *in, VSMap *out, void *userData, VSCore
                     h = d->vi->format->subSamplingH == 0 ? h : h / (d->vi->format->subSamplingH + 1);
                 }
 
-                d->lut[i].reserve(w * h);
+                d->lut[i].reset(new float[w * h]);
 
+#pragma omp parallel for
                 for (int j = 0; j < h; ++j) {
                     for (int k = 0; k < w; ++k) {
-                        d->lut[i][j * w + k] = doCalcExpression(expressionTree, k, j);
+                        d->lut[i][j * w + k] = parseExpression(token[i], k, j);
                     }
                 }
             }

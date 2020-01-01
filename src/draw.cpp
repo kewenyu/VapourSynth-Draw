@@ -54,7 +54,7 @@ static bool isStrNumber(const std::string &str) {
     return true;
 }
 
-static void stripRedundantSpace(std::string &str) noexcept {
+void stripRedundantSpace(std::string &str) noexcept {
     bool lastIsSpace = false;
     std::string::reverse_iterator riter = str.rbegin();
 
@@ -118,166 +118,154 @@ static int getOperandNum(const std::string &str) {
     return strNumMap.at(str);
 }
 
-std::shared_ptr<ExpTreeNode> buildExpressionTree(std::string &expStr) {
-    std::shared_ptr<ExpTreeNode> nodePtr;
+static OpEnum getOperandId(const std::string &str) {
+    if (isStrNumber(str)) {
+        return NUM;
+    }
+
+    static const std::unordered_map<std::string, OpEnum> strNumMap {
+            // Boolean Operator
+            std::make_pair("not", NOT),
+            std::make_pair("and", AND),
+            std::make_pair("or", OR),
+            std::make_pair(">", GT),
+            std::make_pair("<", LT),
+            std::make_pair(">=", GE),
+            std::make_pair("<=", LE),
+            std::make_pair("=", EQ),
+
+            // Numeric Operator
+            std::make_pair("abs", ABS),
+            std::make_pair("+", ADD),
+            std::make_pair("-", SUB),
+            std::make_pair("*", MUL),
+            std::make_pair("/", DIV),
+            std::make_pair("pow", POW),
+            std::make_pair("max", MAX),
+            std::make_pair("min", MIN),
+
+            // Ternary Operator
+            std::make_pair("?", TEL),
+
+            // Placeholder
+            std::make_pair("x", X),
+            std::make_pair("y", Y),
+    };
+
+    if (strNumMap.find(str) == strNumMap.end()) {
+        throw std::runtime_error("getOperandId: Invalid operator: " + str);
+    }
+
+    return strNumMap.at(str);
+}
+
+void tokenize(std::string &expStr, std::vector<Operator> &tokens) {
     std::string tempStr;
-    std::vector<std::shared_ptr<ExpTreeNode>> opStack;
 
     stripRedundantSpace(expStr);
-    std::string::const_iterator iter = expStr.cbegin();
 
-    while (iter != expStr.cend()) {
-        if (*iter == ' ') {
-            int opNum = getOperandNum(tempStr);
+    for(char iter : expStr) {
+        if (iter == ' ') {
+            Operator token;
+            token.opNum = getOperandNum(tempStr);
+            token.opStr = tempStr;
+            token.opId = getOperandId(tempStr);
 
-            nodePtr = std::make_shared<ExpTreeNode>();
-            nodePtr->opNum = opNum;
-            nodePtr->opStr = tempStr;
-
-            for (int i = opNum; i > 0; --i) {
-                std::shared_ptr<ExpTreeNode> opNode = opStack[opStack.size() - i];
-                nodePtr->setChild(opNode);
-            }
-
-            opStack.resize(opStack.size() - opNum);
-            opStack.push_back(nodePtr);
-
+            tokens.push_back(token);
             tempStr.erase();
         } else {
-            tempStr += (*iter);
-        }
-
-        iter++;
-    }
-
-    if (opStack.size() > 1) {
-        throw std::runtime_error("buildExpressionTree: Imbalance operand stack !");
-    } else if (opStack.empty()) {
-        throw std::runtime_error("buildExpressionTree: Unexpected empty stack !");
-    }
-
-    return opStack.back();
-}
-
-union Op {
-    bool b;
-    float f;
-
-    Op(): b() {}
-    explicit Op(float value_f): f(value_f) {}
-    explicit Op(bool value_b): b(value_b) {}
-};
-
-static void parseExpressionTree(const std::shared_ptr<ExpTreeNode> &node, std::vector<Op> &stack, int x, int y) {
-
-    if (node->rightSibling) {
-        parseExpressionTree(node->rightSibling, stack, x, y);
-    }
-
-    if (node->leftChild) {
-        parseExpressionTree(node->leftChild, stack, x, y);
-    }
-
-    if (isStrNumber(node->opStr)) {
-//        Op u{};
-//        std::stringstream ss;
-//        ss << node->opStr;
-//        ss >> u.f;
-        Op u(std::stof(node->opStr));
-        stack.push_back(u);
-    }  else {
-        if (node->opStr == "not") {
-            Op u(!stack[stack.size() - 1].b);
-            stack.resize(stack.size() - 1);
-            stack.push_back(u);
-        } else if (node->opStr == "and") {
-            Op u(stack[stack.size() - 1].b && stack[stack.size() - 2].b);
-            stack.resize(stack.size() - 2);
-            stack.push_back(u);
-        } else if (node->opStr == "or") {
-            Op u(stack[stack.size() - 1].b || stack[stack.size() - 2].b);
-            stack.resize(stack.size() - 2);
-            stack.push_back(u);
-        } else if (node->opStr == ">") {
-            Op u(stack[stack.size() - 1].f > stack[stack.size() - 2].f);
-            stack.resize(stack.size() - 2);
-            stack.push_back(u);
-        } else if (node->opStr == "<") {
-            Op u(stack[stack.size() - 1].f < stack[stack.size() - 2].f);
-            stack.resize(stack.size() - 2);
-            stack.push_back(u);
-        } else if (node->opStr == "<=") {
-            Op u(stack[stack.size() - 1].f <= stack[stack.size() - 2].f);
-            stack.resize(stack.size() - 2);
-            stack.push_back(u);
-        } else if (node->opStr == ">=") {
-            Op u(stack[stack.size() - 1].f >= stack[stack.size() - 2].f);
-            stack.resize(stack.size() - 2);
-            stack.push_back(u);
-        } else if (node->opStr == "=") {
-            Op u(std::fabs(stack[stack.size() - 1].f - stack[stack.size() - 2].f) <= std::numeric_limits<float>::epsilon());
-            stack.resize(stack.size() - 2);
-            stack.push_back(u);
-        } else if (node->opStr == "+") {
-            Op u{};
-            u.f = stack[stack.size() - 1].f + stack[stack.size() - 2].f;
-            stack.resize(stack.size() - 2);
-            stack.push_back(u);
-        } else if (node->opStr == "-") {
-            Op u{};
-            u.f = stack[stack.size() - 1].f - stack[stack.size() - 2].f;
-            stack.resize(stack.size() - 2);
-            stack.push_back(u);
-        } else if (node->opStr == "*") {
-            Op u{};
-            u.f = stack[stack.size() - 1].f * stack[stack.size() - 2].f;
-            stack.resize(stack.size() - 2);
-            stack.push_back(u);
-        } else if (node->opStr == "/") {
-            Op u(stack[stack.size() - 1].f / stack[stack.size() - 2].f);
-            stack.resize(stack.size() - 2);
-            stack.push_back(u);
-        } else if (node->opStr == "pow") {
-            Op u(std::pow(stack[stack.size() - 1].f, stack[stack.size() - 2].f));
-            stack.resize(stack.size() - 2);
-            stack.push_back(u);
-        } else if (node->opStr == "abs") {
-            Op u(std::fabs(stack[stack.size() - 1].f));
-            stack.resize(stack.size() - 1);
-            stack.push_back(u);
-        } else if (node->opStr == "max") {
-            Op u(std::fmax(stack[stack.size() - 1].f, stack[stack.size() - 2].f));
-            stack.resize(stack.size() - 2);
-            stack.push_back(u);
-        } else if (node->opStr == "min") {
-            Op u(std::fmin(stack[stack.size() - 1].f, stack[stack.size() - 2].f));
-            stack.resize(stack.size() - 2);
-            stack.push_back(u);
-        } else if (node->opStr == "?") {
-            Op u{};
-            u.f = stack[stack.size() - 1].b ? stack[stack.size() - 2].f : stack[stack.size() - 3].f;
-            stack.resize(stack.size() - 3);
-            stack.push_back(u);
-        } else if (node->opStr == "x") {
-            Op u(static_cast<float>(x));
-            stack.push_back(u);
-        } else if (node->opStr == "y") {
-            Op u(static_cast<float>(y));
-            stack.push_back(u);
+            tempStr += iter;
         }
     }
 }
 
-float doCalcExpression(const std::shared_ptr<ExpTreeNode> &root, int x, int y) {
-    std::vector<Op> stack;
+float parseExpression(const std::vector<Operator>& tokens, int x, int y) {
+    std::unique_ptr<Operand[]> stack(new Operand[tokens.size()]);
+    int stackSize = 0;
 
-    parseExpressionTree(root, stack, x, y);
-
-    if (stack.size() > 1) {
-        throw std::runtime_error("doCalcExpression: Imbalance operand stack !");
-    } else if (stack.empty()) {
-        throw std::runtime_error("doCalcExpression: Unexpected empty stack !");
+    for(const Operator &node : tokens) {
+        Operand u;
+        switch (node.opId) {
+            case NOT:
+                stack[stackSize - 1].b = !stack[stackSize - 1].b;
+                break;
+            case AND:
+                stack[stackSize - 2].b = stack[stackSize - 2].b && stack[stackSize - 1].b;
+                --stackSize;
+                break;
+            case OR:
+                stack[stackSize - 2].b = stack[stackSize - 2].b || stack[stackSize - 1].b;
+                --stackSize;
+                break;
+            case GT:
+                stack[stackSize - 2].b = stack[stackSize - 2].f > stack[stackSize - 1].f;
+                --stackSize;
+                break;
+            case LT:
+                stack[stackSize - 2].b = stack[stackSize - 2].f < stack[stackSize - 1].f;
+                --stackSize;
+                break;
+            case GE:
+                stack[stackSize - 2].b = stack[stackSize - 2].f >= stack[stackSize - 1].f;
+                --stackSize;
+                break;
+            case LE:
+                stack[stackSize - 2].b = stack[stackSize - 2].f <= stack[stackSize - 1].f;
+                --stackSize;
+                break;
+            case EQ:
+                stack[stackSize - 2].b = std::fabs(stack[stackSize - 2].f - stack[stackSize - 1].f) <= std::numeric_limits<float>::epsilon();
+                --stackSize;
+                break;
+            case ADD:
+                stack[stackSize - 2].f = stack[stackSize - 2].f + stack[stackSize - 1].f;
+                --stackSize;
+                break;
+            case SUB:
+                stack[stackSize - 2].f = stack[stackSize - 2].f - stack[stackSize - 1].f;
+                --stackSize;
+                break;
+            case MUL:
+                stack[stackSize - 2].f = stack[stackSize - 2].f * stack[stackSize - 1].f;
+                --stackSize;
+                break;
+            case DIV:
+                stack[stackSize - 2].f = stack[stackSize - 2].f / stack[stackSize - 1].f;
+                --stackSize;
+                break;
+            case POW:
+                stack[stackSize - 2].f = std::pow(stack[stackSize - 2].f ,stack[stackSize - 1].f);
+                --stackSize;
+                break;
+            case ABS:
+                stack[stackSize].f = std::fabs(stack[stackSize].f);
+                break;
+            case MAX:
+                stack[stackSize - 2].f = std::fmax(stack[stackSize - 2].f, stack[stackSize - 1].f);
+                --stackSize;
+                break;
+            case MIN:
+                stack[stackSize - 2].f = std::fmin(stack[stackSize - 2].f, stack[stackSize - 1].f);
+                --stackSize;
+                break;
+            case TEL:
+                stack[stackSize - 3].f = stack[stackSize - 3].b ? stack[stackSize - 2].f : stack[stackSize - 1].f;
+                stackSize -= 2;
+                break;
+            case X:
+                stack[stackSize].f = static_cast<float>(x);
+                ++stackSize;
+                break;
+            case Y:
+                stack[stackSize].f = static_cast<float>(y);
+                ++stackSize;
+                break;
+            case NUM:
+                stack[stackSize].f = std::stof(node.opStr);
+                ++stackSize;
+                break;
+        }
     }
 
-    return stack.back().f;
+    return stack[0].f;
 }

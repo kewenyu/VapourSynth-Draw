@@ -22,37 +22,52 @@
 #include <memory>
 #include <string>
 
-struct ExpTreeNode {
-    std::string opStr;
-    int opNum;
+union Operand {
+    bool b;
+    float f;
 
-    std::shared_ptr<ExpTreeNode> leftChild;
-    std::shared_ptr<ExpTreeNode> rightSibling;
-
-    ExpTreeNode(): opStr(), opNum(0), leftChild(), rightSibling() {}
-
-    void setSibling(const std::shared_ptr<ExpTreeNode>& child) {
-        if (this->rightSibling) {
-            this->rightSibling->setSibling(child);
-        } else {
-            this->rightSibling = child;
-        }
-    }
-
-    void setChild(const std::shared_ptr<ExpTreeNode>& child) {
-        if (this->leftChild) {
-            if (this->leftChild->rightSibling) {
-                this->leftChild->rightSibling->setSibling(child);
-            } else {
-                this->leftChild->rightSibling = child;
-            }
-        } else {
-            this->leftChild = child;
-        }
-    }
+    Operand(): b() {}
+    explicit Operand(float value_f): f(value_f) {}
+    explicit Operand(bool value_b): b(value_b) {}
 };
 
-std::shared_ptr<ExpTreeNode> buildExpressionTree(std::string &expStr);
-float doCalcExpression(const std::shared_ptr<ExpTreeNode> &root, int x, int y);
+enum OpEnum {
+    NUM,
+
+    X,
+    Y,
+
+    NOT,
+    AND,
+    OR,
+    GT,
+    LT,
+    GE,
+    LE,
+    EQ,
+
+    ABS,
+    ADD,
+    SUB,
+    MUL,
+    DIV,
+    POW,
+    MAX,
+    MIN,
+
+    TEL,
+};
+
+struct Operator {
+    std::string opStr;
+    OpEnum opId;
+    int opNum;
+
+    Operator(): opStr(), opNum(0), opId() {}
+};
+
+void tokenize(std::string &expStr, std::vector<Operator> &tokens);
+void stripRedundantSpace(std::string &str) noexcept;
+float parseExpression(const std::vector<Operator> &tokens, int x, int y);
 
 #endif //VSDRAW_DRAW_H
