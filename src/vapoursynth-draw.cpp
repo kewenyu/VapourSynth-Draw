@@ -31,6 +31,7 @@ struct DrawData {
     const VSVideoInfo *vi;
 
     bool process[3];
+	std::vector<Operator> token[3];
     std::unique_ptr<float[]> lut[3];
 };
 
@@ -52,7 +53,13 @@ static void process(const VSFrameRef *src, VSFrameRef *dst, const VSFormat *fi, 
 
         for (int y = 0; y < h; ++y) {
             for (int x = 0; x < w; ++x) {
-                dstp[x] = d->lut[plane][y * w + x];
+				if (d->lut[plane][y * w + x] >= 0) {
+					dstp[x] = d->lut[plane][y * w + x];
+				}
+				else {
+					dstp[x] = parseExpression(d->token[plane], x, y);
+					d->lut[plane][y * w + x] = dstp[x];
+				}
             }
 
             dstp += dstStride;
@@ -127,20 +134,19 @@ static void VS_CC drawCreate(const VSMap *in, VSMap *out, void *userData, VSCore
         }
 
         std::string expr[3];
-        std::vector<Operator> token[3];
 
         for (int i = 0; i < numExpr; ++i) {
             expr[i] = vsapi->propGetData(in, "expr", i, nullptr);
             stripRedundantSpace(expr[i]);
-            tokenize(expr[i], token[i]);
+            tokenize(expr[i], d->token[i]);
         }
 
         for (int i = numExpr; i < 3; ++i) {
-            token[i] = token[numExpr - 1];
+            d->token[i] = d->token[numExpr - 1];
         }
 
         for (int i = 0; i < 3; ++i) {
-            if (!token[i].empty()) {
+            if (!d->token[i].empty()) {
                 d->process[i] = true;
 
                 int w = d->vi->width;
@@ -153,11 +159,9 @@ static void VS_CC drawCreate(const VSMap *in, VSMap *out, void *userData, VSCore
 
                 d->lut[i].reset(new float[w * h]);
 
-                for (int j = 0; j < h; ++j) {
-                    for (int k = 0; k < w; ++k) {
-                        d->lut[i][j * w + k] = parseExpression(token[i], k, j);
-                    }
-                }
+				for (int j = 0; j < w * h; ++j) {
+					d->lut[i][j] = -1;
+				}
             }
         }
     } catch (std::runtime_error &e) {
