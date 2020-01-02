@@ -54,6 +54,42 @@ static bool isStrNumber(const std::string &str) {
     return true;
 }
 
+static float strToFloat(const std::string &str) {
+    std::string::const_iterator iter = str.begin();
+    float res = 0.0f;
+    bool isNeg = false;
+
+    if (*iter == '-') {
+        isNeg = true;
+        iter++;
+    }
+
+    while (*iter >= '0' && *iter <= '9') {
+        res = res * 10.0f + static_cast<float>(*iter - '0');
+        iter++;
+    }
+
+    if (*iter == '.') {
+        float decimal = 0.0f;
+        int n = 0;
+        iter++;
+
+        while(*iter >= '0' && *iter <= '9') {
+            decimal = (decimal * 10.0f) + static_cast<float>(*iter - '0');
+            iter++;
+            ++n;
+        }
+
+        res += decimal / static_cast<float>(std::pow(10.0f, n));
+    }
+
+    if (isNeg) {
+        res = -res;
+    }
+
+    return res;
+}
+
 void stripRedundantSpace(std::string &str) noexcept {
     bool lastIsSpace = false;
     std::string::reverse_iterator riter = str.rbegin();
@@ -261,7 +297,7 @@ float parseExpression(const std::vector<Operator>& tokens, int x, int y) {
                 ++stackSize;
                 break;
             case NUM:
-                stack[stackSize].f = std::stof(node.opStr);
+                stack[stackSize].f = strToFloat(node.opStr);
                 ++stackSize;
                 break;
         }

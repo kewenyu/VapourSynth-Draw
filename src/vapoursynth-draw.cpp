@@ -153,7 +153,6 @@ static void VS_CC drawCreate(const VSMap *in, VSMap *out, void *userData, VSCore
 
                 d->lut[i].reset(new float[w * h]);
 
-#pragma omp parallel for
                 for (int j = 0; j < h; ++j) {
                     for (int k = 0; k < w; ++k) {
                         d->lut[i][j * w + k] = parseExpression(token[i], k, j);
