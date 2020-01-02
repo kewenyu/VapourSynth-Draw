@@ -158,9 +158,9 @@ static void VS_CC drawCreate(const VSMap *in, VSMap *out, void *userData, VSCore
 
                 d->lut[i].reset(new float[w * h]);
 
-				for (int j = 0; j < w * h; ++j) {
-					d->lut[i][j] = -1;
-				}
+                for (int j = 0; j < w * h; ++j) {
+                    d->lut[i][j] = -1;
+                }
             }
         }
     } catch (std::runtime_error &e) {
