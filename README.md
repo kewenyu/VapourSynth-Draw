@@ -13,17 +13,18 @@ an expression input and take the pixel's coordinate into the calculation.
 draw.Draw(clip, expr[])
 ```
 * clip: 8~16 bit integer YUV or GRAY clip.
-* expr: expressions. Multiple expressions can be given to individual planes of clip. The
+* expr: expressions. Multiple expressions can be given to individual planes of a clip. The
 following operators can be used in the expressions:
     * +, -, *, /, abs, pow, max, min
     * \>, <, >=, <=, =, not, and, or
     * ?
+    * numbers: any integer/float point numbers without exponent
 
 ## Example
 ```python
 from vapoursynth import core
 
-src = an 1080p YUV clip...
+src = # an 1080p YUV clip...
 
 # Draw a white circle at the middle of a 8bit 1080p clip with radius of 100
 
