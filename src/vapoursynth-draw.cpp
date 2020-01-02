@@ -31,7 +31,7 @@ struct DrawData {
     const VSVideoInfo *vi;
 
     bool process[3];
-	std::vector<Operator> token[3];
+    std::vector<Operator> token[3];
     std::unique_ptr<float[]> lut[3];
 };
 
@@ -53,13 +53,12 @@ static void process(const VSFrameRef *src, VSFrameRef *dst, const VSFormat *fi, 
 
         for (int y = 0; y < h; ++y) {
             for (int x = 0; x < w; ++x) {
-				if (d->lut[plane][y * w + x] >= 0) {
-					dstp[x] = d->lut[plane][y * w + x];
-				}
-				else {
-					dstp[x] = parseExpression(d->token[plane], x, y);
-					d->lut[plane][y * w + x] = dstp[x];
-				}
+                if (d->lut[plane][y * w + x] >= 0) {
+                    dstp[x] = d->lut[plane][y * w + x];
+                } else {
+                    dstp[x] = parseExpression(d->token[plane], x, y);
+                    d->lut[plane][y * w + x] = dstp[x];
+                }
             }
 
             dstp += dstStride;
