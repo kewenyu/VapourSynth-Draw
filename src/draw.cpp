@@ -138,6 +138,7 @@ static int getOperandNum(const std::string &str) {
             std::make_pair("pow", 2),
             std::make_pair("max", 2),
             std::make_pair("min", 2),
+            std::make_pair("%", 2),
 
             // Ternary Operator
             std::make_pair("?", 3),
@@ -179,9 +180,10 @@ static OpEnum getOperandId(const std::string &str) {
             std::make_pair("pow", POW),
             std::make_pair("max", MAX),
             std::make_pair("min", MIN),
+            std::make_pair("%", MOD),
 
             // Ternary Operator
-            std::make_pair("?", TEL),
+            std::make_pair("?", TER),
 
             // Placeholder
             std::make_pair("x", X),
@@ -220,7 +222,6 @@ float parseExpression(const std::vector<Operator>& tokens, int x, int y) {
     int stackSize = 0;
 
     for(const Operator &node : tokens) {
-        Operand u;
         switch (node.opId) {
             case NOT:
                 stack[stackSize - 1].b = !stack[stackSize - 1].b;
@@ -284,7 +285,11 @@ float parseExpression(const std::vector<Operator>& tokens, int x, int y) {
                 stack[stackSize - 2].f = std::fmin(stack[stackSize - 2].f, stack[stackSize - 1].f);
                 --stackSize;
                 break;
-            case TEL:
+            case MOD:
+                stack[stackSize - 2].f = std::fmod(stack[stackSize - 2].f, stack[stackSize - 1].f);
+                --stackSize;
+                break;
+            case TER:
                 stack[stackSize - 3].f = stack[stackSize - 3].b ? stack[stackSize - 2].f : stack[stackSize - 1].f;
                 stackSize -= 2;
                 break;

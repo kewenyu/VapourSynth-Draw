@@ -54,8 +54,9 @@ enum OpEnum {
     POW,
     MAX,
     MIN,
+    MOD,
 
-    TEL,
+    TER,
 };
 
 struct Operator {
