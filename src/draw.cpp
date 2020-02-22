@@ -199,6 +199,7 @@ static OpEnum getOperandId(const std::string &str) {
 
 void tokenize(std::string &expStr, std::vector<Operator> &tokens) {
     std::string tempStr;
+    int needOpNum = 0;
 
     stripRedundantSpace(expStr);
 
@@ -209,11 +210,21 @@ void tokenize(std::string &expStr, std::vector<Operator> &tokens) {
             token.opStr = tempStr;
             token.opId = getOperandId(tempStr);
 
+            needOpNum += token.opNum;
             tokens.push_back(token);
+
+            if (tokens.size() <= needOpNum) {
+                throw std::runtime_error("Not enough elements on stack to perform operation: " + tempStr);
+            }
+
             tempStr.erase();
         } else {
             tempStr += iter;
         }
+    }
+
+    if (needOpNum + 1 != tokens.size()) {
+        throw std::runtime_error("Imbalance Stack !");
     }
 }
 
